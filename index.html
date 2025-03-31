@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Shape Editor</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            font-family: Arial, sans-serif;
+        }
+        
+        #shapes-panel {
+            width: 200px;
+            background: #f0f0f0;
+            padding: 20px;
+            border-right: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100vh;
+            overflow-y: auto;
+            position: fixed;
+        }
+        
+        #viewer {
+            flex: 1;
+            height: 100vh;
+            margin-left: 200px;
+        }
+        
+        .shape-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: move;
+            user-select: none;
+            text-align: center;
+        }
+        
+        .shape-item:hover {
+            background: #e9e9e9;
+        }
+        
+        #dimensions-panel {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .dimension-row {
+            margin: 5px 0;
+        }
+        
+        .dimension-label {
+            display: inline-block;
+            width: 20px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        canvas {
+            display: block;
+        }
+
+        /* 渲染面板样式 */
+        #render-panel {
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .option-group {
+            margin-bottom: 15px;
+        }
+
+        .option-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .option-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 14px;
+        }
+
+        .option-group input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        #time-value {
+            float: right;
+            color: #666;
+        }
+
+        #material-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .material-item {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .material-item label {
+            min-width: 80px;
+            color: #333;
+            flex-shrink: 0;
+        }
+
+        .material-item input[type="color"] {
+            width: 40px;
+            height: 30px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .material-item input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #ddd;
+            border-radius: 3px;
+            outline: none;
+            min-width: 0;
+        }
+
+        .material-item input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4a90e2;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="shapes-panel">
+        <div class="shapes-section">
+            <h3>Shapes</h3>
+            <div class="shape-item" draggable="true" data-shape="cube">Cube</div>
+            <div class="shape-item" draggable="true" data-shape="sphere">Sphere</div>
+            <div class="shape-item" draggable="true" data-shape="cylinder">Cylinder</div>
+            <div class="shape-item" draggable="true" data-shape="cone">Cone</div>
+            <div class="shape-item" draggable="true" data-shape="torus">Torus</div>
+            <div class="shape-item" draggable="true" data-shape="plane">Plane</div>
+        </div>
+
+        <div id="transform-controls">
+            <h3>Transformation</h3>
+            <div class="shape-item" draggable="false" data-control="translate">Move (G)</div>
+            <div class="shape-item" draggable="false" data-control="rotate">Rotate (R)</div>
+            <div class="shape-item" draggable="false" data-control="scale">Scale (S)</div>
+            <div class="shape-item" draggable="false" data-control="xy">XY Plane</div>
+            <div class="shape-item" draggable="false" data-control="yz">YZ Plane</div>
+            <div class="shape-item" draggable="false" data-control="xz">XZ Plane</div>
+        </div>
+
+        <div id="material-controls">
+            <h3>Materials</h3>
+            <div class="material-item">
+                <label>Color:</label>
+                <input type="color" id="material-color" value="#cccccc">
+            </div>
+            <div class="material-item">
+                <label>Opacity:</label>
+                <input type="range" id="material-opacity" min="0" max="100" value="80">
+            </div>
+        </div>
+
+        <!-- <div id="render-panel">
+            <div class="panel-header">
+                <h3>Render Settings</h3>
+                <label class="switch">
+                    <input type="checkbox" id="render-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="render-options">
+                <div class="option-group">
+                    <label>Weather</label>
+                    <select id="weather-select">
+                        <option value="sunny">Sunny</option>
+                        <option value="cloudy">Cloudy</option>
+                        <option value="rainy">Rainy</option>
+                        <option value="snowy">Snowy</option>
+                    </select>
+                </div>
+
+                <div class="option-group">
+                    <label>Time: <span id="time-value">12:00</span></label>
+                    <input type="range" id="time-slider" min="0" max="24" step="0.5" value="12">
+                </div>
+
+                <div class="option-group">
+                    <label>Location</label>
+                    <select id="location-select">
+                        <option value="beijing">New York (40.7°N, 74.0°W)</option>
+                        <option value="tokyo">Tokyo (35.7°N, 139.7°E)</option>
+                        <option value="newyork">Beijing (39.9°N, 116.4°E)</option>
+                        <option value="london">London (51.5°N, 0.1°W)</option>
+                        <option value="paris">Paris (48.9°N, 2.4°E)</option>
+                        <option value="sydney">Sydney (33.9°S, 151.2°E)</option>
+                        <option value="dubai">Dubai (25.2°N, 55.3°E)</option>
+                        <option value="moscow">Moscow (55.8°N, 37.6°E)</option>
+                        <option value="singapore">Singapore (1.4°N, 103.8°E)</option>
+                        <option value="cairo">Cairo (30.0°N, 31.2°E)</option>
+                    </select>
+                </div>
+
+                <div class="option-group">
+                    <label>Surranding</label>
+                    <select id="scene-select">
+                        <option value="city">Urban</option>
+                        <option value="rural">Rural</option>
+                        <option value="mountain">Mountain</option>
+                        <option value="grassland">Grassland</option>
+                        <option value="beach">Beach</option>
+                        <option value="rainforest">Rainforest</option>
+                        <option value="forest">Forest</option>
+                        <option value="desert">Desert</option>
+                        <option value="snow">Snow</option>
+                    </select>
+                </div>
+            </div> -->
+        </div>
+    </div>
+    
+    <div id="viewer"></div>
+    
+    <div id="dimensions-panel">
+        <div class="dimension-row">
+            <span class="dimension-label">X:</span>
+            <span id="dim-x">0</span>
+        </div>
+        <div class="dimension-row">
+            <span class="dimension-label">Y:</span>
+            <span id="dim-y">0</span>
+        </div>
+        <div class="dimension-row">
+            <span class="dimension-label">Z:</span>
+            <span id="dim-z">0</span>
+        </div>
+    </div>
+
+    <!-- <div id="info">
+        <div id="info-content">
+            <div id="info-title">Transform Controls</div>
+            <div id="info-text">
+                <div class="button-row">
+                    <button id="translate">Move</button>
+                    <button id="rotate">Rotate</button>
+                    <button id="scale">Scale</button>
+                </div>
+                <div class="button-row">
+                    <button id="local">Local</button>
+                    <button id="world">World</button>
+                </div>
+                <div class="button-row">
+                    <button id="x">X</button>
+                    <button id="y">Y</button>
+                    <button id="z">Z</button>
+                </div>
+                <div class="button-row">
+                    <button id="xy">XY</button>
+                    <button id="yz">YZ</button>
+                    <button id="xz">XZ</button>
+                </div>
+            </div>
+        </div>
+    </div> -->
+    <!-- <div id="menu">
+        <div id="menu-content">
+            <div id="menu-title">Add Shape</div>
+            <div id="menu-text">
+                <div class="button-row">
+                    <button id="addBox">Box</button>
+                    <button id="addSphere">Sphere</button>
+                    <button id="addCylinder">Cylinder</button>
+                </div>
+                <div class="button-row">
+                    <button id="addCone">Cone</button>
+                    <button id="addTorus">Torus</button>
+                    <button id="addPlane">Plane</button>
+                </div>
+            </div>
+        </div>
+    </div> -->
+    <!-- <div id="model-controls">
+        <div id="model-controls-content">
+            <div id="model-controls-title">Model Controls</div>
+            <div id="model-controls-text">
+                <div class="button-row">
+                    <button id="loadModel">Load Model</button>
+                    <button id="convertModel">Convert Model</button>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+    <script type="module" src="gltfToJson.js"></script>
+    <script type="module" src="app.js"></script>
+    <script>
+        document.getElementById('convertGLTF').addEventListener('click', async () => {
+            try {
+                const jsonModel = await window.convertGLTFtoJSON('20250330_house.gltf');
+                
+                // 将JSON转换为字符串并下载
+                const jsonString = JSON.stringify(jsonModel, null, 4);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'house.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert('模型转换完成！');
+            } catch (error) {
+                console.error('转换失败:', error);
+                alert('模型转换失败，请查看控制台了解详情。');
+            }
+        });
+    </script>
+</body>
+</html>
