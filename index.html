@@ -398,26 +398,32 @@
     <script type="module" src="gltfToJson.js"></script>
     <script type="module" src="app.js"></script>
     <script>
-        document.getElementById('convertGLTF').addEventListener('click', async () => {
-            try {
-                const jsonModel = await window.convertGLTFtoJSON('20250330_house.gltf');
-                
-                // 将JSON转换为字符串并下载
-                const jsonString = JSON.stringify(jsonModel, null, 4);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'house.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                alert('模型转换完成！');
-            } catch (error) {
-                console.error('转换失败:', error);
-                alert('模型转换失败，请查看控制台了解详情。');
+        // 等待 DOM 加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            const convertModelBtn = document.getElementById('convertModel');
+            if (convertModelBtn) {
+                convertModelBtn.addEventListener('click', async () => {
+                    try {
+                        const jsonModel = await window.convertGLTFtoJSON('20250330_house.gltf');
+                        
+                        // 将JSON转换为字符串并下载
+                        const jsonString = JSON.stringify(jsonModel, null, 4);
+                        const blob = new Blob([jsonString], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'house.json';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        
+                        alert('模型转换完成！');
+                    } catch (error) {
+                        console.error('转换失败:', error);
+                        alert('模型转换失败，请查看控制台了解详情。');
+                    }
+                });
             }
         });
     </script>
