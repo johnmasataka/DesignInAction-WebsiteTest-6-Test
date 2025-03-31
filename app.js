@@ -1430,3 +1430,53 @@ function restoreState(state) {
 // **初始化**
 init();
 addTransformControls();
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize scene
+    initScene();
+    
+    // Initialize transform controls
+    initTransformControls();
+    
+    // Add event listeners
+    document.querySelector('[data-control="translate"]').addEventListener('click', () => {
+        if (transformControls && selectedObject) {
+            transformControls.setMode('translate');
+            transformControls.showX = true;
+            transformControls.showY = true;
+            transformControls.showZ = true;
+        }
+    });
+
+    // Add material control event listeners
+    document.getElementById('material-color').addEventListener('input', (e) => {
+        if (selectedObject) {
+            const color = new THREE.Color(e.target.value);
+            if (Array.isArray(selectedObject.material)) {
+                selectedObject.material.forEach(mat => {
+                    if (mat) {
+                        mat.color = color;
+                    }
+                });
+            } else if (selectedObject.material) {
+                selectedObject.material.color = color;
+            }
+        }
+    });
+
+    document.getElementById('material-opacity').addEventListener('input', (e) => {
+        if (selectedObject) {
+            const opacity = e.target.value / 100;
+            if (Array.isArray(selectedObject.material)) {
+                selectedObject.material.forEach(mat => {
+                    if (mat) {
+                        mat.opacity = opacity;
+                    }
+                });
+            } else if (selectedObject.material) {
+                selectedObject.material.opacity = opacity;
+            }
+        }
+    });
+});
